@@ -51,7 +51,7 @@ int main(int argc, char *argv[]){
 	}
 	getValue(fullFile);
 	fclose(fullFile);
-
+	fclose(outFile);
 
 	return 0;
 }
@@ -60,14 +60,15 @@ int main(int argc, char *argv[]){
 uint64_t getValue(FILE *f){
 	uint64_t value;
 	char current = fgetc(f);
-	char *readStr = calloc(1, 1);//One for \0
+	char *readStr = malloc(1);//One for \0
 	memset(readStr, '\0', 1);
 	while(current != EOF){
-		readStr = realloc(readStr, strlen(readStr) + 1);
+		readStr = realloc(readStr, strlen(readStr) + 2);//One for new \0, one for char
 		strncat(readStr, &current, 1);
 		current = fgetc(f);
 	}
-
+	printf("strlen(readStr) = %u\n", strlen(readStr));
+	puts(readStr);
 	free(readStr);
 	return value;
 }
