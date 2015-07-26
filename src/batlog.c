@@ -58,7 +58,7 @@ int main(int argc, char *argv[]){
 
 
 uint64_t getValue(FILE *f){
-	uint64_t value;
+	uint64_t value = 0;
 	char current = fgetc(f);
 	char *readStr = malloc(1);//One for \0
 	memset(readStr, '\0', 1);
@@ -67,8 +67,6 @@ uint64_t getValue(FILE *f){
 		strncat(readStr, &current, 1);
 		current = fgetc(f);
 	}
-	printf("strlen(readStr) = %u\n", strlen(readStr));
-	puts(readStr);
 	free(readStr);
 	return value;
 }
