@@ -12,7 +12,8 @@ uint64_t getValue(FILE *f);//using uint64_t just in case someone has a really im
 int main(int argc, char *argv[]){
 	FILE *outFile;	
 	FILE *fullFile;
-	FILE *chargeFile;
+	uint64_t fullCharge;
+	uint64_t currentCharge;
 	time_t interval = 0;
 	time_t length = 0;
 	time_t start;
@@ -20,9 +21,11 @@ int main(int argc, char *argv[]){
 	time_t elapsed;
 	time_t end;
 	struct timespec delay;
+
+
 	if (argc != 4){
 		printf("Usage: %s output interval length\n", argv[0]);
-		return 1;
+		return 2;
 	}
 	interval = strtol(argv[2], NULL, 10);
 	length = strtol(argv[3], NULL, 10);
@@ -30,29 +33,43 @@ int main(int argc, char *argv[]){
 	//Ensure that the numeric args were ok
 		puts("Invalid arguments");
 		puts("Note: length must be greater than interval");
-	return 1;
+	return 2;
 	}
 	
 	now = time(NULL);
 	start = now;
-	end = start + interval;
+	end = start + length;
 	delay.tv_nsec = 0;//No values less than a second to be waited
 	delay.tv_sec = interval;
 
 	outFile = fopen(argv[1], "w");
 	if(!outFile){
 		perror("Invalid output file");
-		return 1;
+		return 2;
 	}
 	fullFile = fopen("/sys/class/power_supply/BAT0/energy_full", "r");
 	if(!fullFile){
 		perror("Error opening /sys/class/power_supply/BAT0/energy_full");
 		return 1;
 	}
-	getValue(fullFile);
-	fclose(fullFile);
-	fclose(outFile);
+	fullCharge = getValue(fullFile);
 
+	if(!fullCharge){
+		puts("Error: /sys/class/power_supply/BAT0/energy_full read as containing value 0");
+		fclose(fullFile);
+		fclose(outFile);
+		return 1;
+	}
+	fclose(fullFile);//It's not needed any more; there's no point keeping it open.
+	while(difftime(now, end) < 0){
+		FILE *currentFile = fopen("/sys/class/power_supply/BAT0/energy_now", "r");
+		uint64_t currentCharge = getValue(currentFile);
+		printf("Current charge: %lu\n", currentCharge);
+		nanosleep(&delay, NULL);
+		now = time(NULL);
+		fclose(currentFile);
+	}
+	fclose(outFile);
 	return 0;
 }
 
@@ -67,6 +84,7 @@ uint64_t getValue(FILE *f){
 		strncat(readStr, &current, 1);
 		current = fgetc(f);
 	}
+	value = strtol(readStr, NULL, 10);
 	free(readStr);
 	return value;
 }
