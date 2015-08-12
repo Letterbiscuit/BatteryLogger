@@ -5,15 +5,16 @@
 #include <time.h>
 #include <string.h>
 
-uint64_t getValue(FILE *f);//using uint64_t just in case someone has a really impressive battery
-
+uint64_t getValue(FILE *f);//using uint64_t just in case someone has a really 
+			   //impressive battery
+void writeCsv(FILE *outFile, time_t elapsed, uint64_t fullCharge,
+	uint64_t currentCharge);
 
 
 int main(int argc, char *argv[]){
 	FILE *outFile;	
 	FILE *fullFile;
 	uint64_t fullCharge;
-	uint64_t currentCharge;
 	time_t interval = 0;
 	time_t length = 0;
 	time_t start;
@@ -49,25 +50,41 @@ int main(int argc, char *argv[]){
 	}
 	fullFile = fopen("/sys/class/power_supply/BAT0/energy_full", "r");
 	if(!fullFile){
-		perror("Error opening /sys/class/power_supply/BAT0/energy_full");
+		perror("Error opening /sys/class/power_supply/BAT0/\
+energy_full");
 		return 1;
 	}
 	fullCharge = getValue(fullFile);
 
 	if(!fullCharge){
-		puts("Error: /sys/class/power_supply/BAT0/energy_full read as containing value 0");
+		puts("Error: /sys/class/power_supply/BAT0/energy_full read as \
+containing value 0");
 		fclose(fullFile);
 		fclose(outFile);
 		return 1;
 	}
-	fclose(fullFile);//It's not needed any more; there's no point keeping it open.
+	fclose(fullFile);//Transitioning to a local version in the while loop
+
+	//Prepare the output file
+	fputs("TimeElapsed,FullCharge,CurrentCharge\n", outFile);
+
+	elapsed = 0;//Set to zero because otherwise is undefined in the first
+		    //iteration
 	while(difftime(now, end) < 0){
-		FILE *currentFile = fopen("/sys/class/power_supply/BAT0/energy_now", "r");
+		FILE *currentFile = fopen("/sys/class/power_supply/BAT0/energy\
+_now", "r");
+		FILE *fullFile = fopen("/sys/class/power_supply/BAT0/energy\
+_full", "r");
 		uint64_t currentCharge = getValue(currentFile);
-		printf("Current charge: %lu\n", currentCharge);
+		uint64_t fullCharge = getValue(fullFile);//Logging full as well
+							 //to log any battery
+							 //degradation
+		writeCsv(outFile, elapsed, fullCharge, currentCharge);
 		nanosleep(&delay, NULL);
-		now = time(NULL);
-		fclose(currentFile);
+		now = time(NULL);//Update time variables
+		elapsed = now - start;
+		fclose(currentFile);//Commit changes
+		fclose(fullFile);
 	}
 	fclose(outFile);
 	return 0;
@@ -80,11 +97,23 @@ uint64_t getValue(FILE *f){
 	char *readStr = malloc(1);//One for \0
 	memset(readStr, '\0', 1);
 	while(current != EOF){
-		readStr = realloc(readStr, strlen(readStr) + 2);//One for new \0, one for char
+		readStr = realloc(readStr, strlen(readStr) + 2);//One for new
+								// \0,
+							//one for char
 		strncat(readStr, &current, 1);
 		current = fgetc(f);
 	}
 	value = strtol(readStr, NULL, 10);
 	free(readStr);
 	return value;
+}
+
+void writeCsv(FILE *outFile, time_t elapsed, uint64_t fullCharge,
+	uint64_t currentCharge){
+
+	fprintf(outFile, "%lu,%lu,%lu\n", elapsed, fullCharge, currentCharge);
+
+
+
+
 }
