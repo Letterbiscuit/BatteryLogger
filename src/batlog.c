@@ -65,8 +65,6 @@ containing value 0");
 	}
 	fclose(fullFile);//Transitioning to a local version in the while loop
 
-	//Prepare the output file
-	fputs("TimeElapsed,FullCharge,CurrentCharge\n", outFile);
 
 	elapsed = 0;//Set to zero because otherwise is undefined in the first
 		    //iteration
@@ -76,9 +74,7 @@ _now", "r");
 		FILE *fullFile = fopen("/sys/class/power_supply/BAT0/energy\
 _full", "r");
 		uint64_t currentCharge = getValue(currentFile);
-		uint64_t fullCharge = getValue(fullFile);//Logging full as well
-							 //to log any battery
-							 //degradation
+		uint64_t fullCharge = getValue(fullFile);
 		writeCsv(outFile, elapsed, fullCharge, currentCharge);
 		nanosleep(&delay, NULL);
 		now = time(NULL);//Update time variables
@@ -99,7 +95,7 @@ uint64_t getValue(FILE *f){
 	while(current != EOF){
 		readStr = realloc(readStr, strlen(readStr) + 2);//One for new
 								// \0,
-							//one for char
+								//one for char
 		strncat(readStr, &current, 1);
 		current = fgetc(f);
 	}
